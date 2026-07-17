@@ -158,6 +158,23 @@
         "ballon d'or",
         "ballon dor"
       ]
+    },
+    "golf_round_matchup": {
+      "sport": "golf",
+      "league": "pga",
+      "aliases": [
+        "3-ball matchup",
+        "3 ball matchup",
+        "round matchup"
+      ]
+    },
+    "golf_tournament": {
+      "sport": "golf",
+      "league": "pga",
+      "aliases": [
+        "pga tournament",
+        "golf tournament"
+      ]
     }
   },
   "leagues": {
@@ -194,6 +211,11 @@
     "epl": [
       "premier league",
       "epl"
+    ],
+    "pga": [
+      "pga",
+      "pga tour",
+      "professional golfers association"
     ]
   }
 }

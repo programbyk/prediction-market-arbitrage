@@ -153,6 +153,8 @@ class ParsedMarket:
     league: Optional[str] = None
     competition: Optional[str] = None
     event_scope: Optional[str] = None
+    participant_type: Optional[str] = None
+    event_fingerprint: Optional[str] = None
     teams: Tuple[str, ...] = field(default_factory=tuple)
     player: Optional[str] = None
 
@@ -620,14 +622,27 @@ LEAGUE_PATTERNS = [
 def detect_sports_identity(text: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """Return sport, league and exact competition.
 
-    Stage 2.2 first checks the JSON knowledge base. Existing regex rules remain
-    as a fallback so the migration does not reduce current coverage.
+    V6.2 prioritizes strong contextual signals before generic aliases. This
+    prevents a golfer named "Fifa Laopakdee" from being classified as a FIFA
+    World Cup market merely because the person's first name is Fifa.
     """
+    t = normalize_text(text)
+
+    # Strong golf context takes priority over names and generic FIFA tokens.
+    if re.search(
+        bounded_alt(
+            "pga", "golf", "3 ball", "3-ball", "three ball",
+            "birdies", "bogeys", "front nine", "back nine"
+        ),
+        t,
+    ) or re.search(r"\bkxpga", t):
+        if re.search(bounded_alt("round", "matchup", "3 ball", "3-ball", "three ball"), t):
+            return "golf", "pga", "golf_round_matchup"
+        return "golf", "pga", "golf_tournament"
+
     identity = get_knowledge_base().resolve_sports_identity(text)
     if identity:
         return identity.sport, identity.league, identity.competition
-
-    t = normalize_text(text)
 
     for pattern, competition, sport, league in SPORT_COMPETITIONS:
         if re.search(pattern, t):
@@ -783,101 +798,201 @@ def fetch_kalshi_markets(use_cache: bool = True) -> List[Dict[str, Any]]:
 
 
 def fetch_polymarket_markets(use_cache: bool = True) -> List[Dict[str, Any]]:
-    """Fetch up to 5,000 open Polymarket markets using keyset pagination.
+    """Fetch up to 5,000 open Polymarket markets.
 
-    Polymarket's keyset endpoint is more reliable than offset pagination for
-    large result sets. Each response returns ``next_cursor``; that cursor is
-    sent back as ``after_cursor`` for the next page.
+    Uses the official keyset endpoint first. If that endpoint returns an HTTP
+    error, an unexpected payload, or zero markets, it automatically falls back
+    to the standard /markets endpoint with offset pagination.
+
+    The function never discards markets already downloaded because a later
+    page fails.
     """
-    cached = load_cache("polymarket_markets_v6_1_keyset.json") if use_cache else None
-    if cached is not None:
+    cache_name = "polymarket_markets_v6_1_keyset.json"
+    cached = load_cache(cache_name) if use_cache else None
+    if cached is not None and isinstance(cached, list) and cached:
         print(f"[Polymarket] Using cache: {len(cached)} raw markets")
         return cached
 
-    markets: List[Dict[str, Any]] = []
-    seen_ids: Set[str] = set()
-    cursor: Optional[str] = None
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "prediction-market-arbitrage/6.1",
+    }
 
-    for page in range(1, POLY_MAX_PAGES + 1):
-        params: Dict[str, Any] = {
-            "limit": POLY_LIMIT,
-            "closed": "false",
-            "order": "volume_num",
-            "ascending": "false",
-        }
-        if cursor:
-            params["after_cursor"] = cursor
-
-        print(f"[Polymarket] Fetching page {page}/{POLY_MAX_PAGES}...")
-
-        try:
-            resp = requests.get(
-                POLYMARKET_API_URL,
-                params=params,
-                timeout=REQUEST_TIMEOUT,
-            )
-
-            if resp.status_code == 429 or resp.status_code >= 500:
-                resp = request_with_retry(POLYMARKET_API_URL, params)
-            elif resp.status_code >= 400:
-                print(
-                    f"[Polymarket] HTTP {resp.status_code} on page {page}. "
-                    f"Keeping {len(markets)} markets."
-                )
-                break
-
-            payload = resp.json()
-            if not isinstance(payload, dict):
-                print("[Polymarket] Unexpected keyset response. Stopping safely.")
-                break
-
-            batch = payload.get("markets", [])
-            if not isinstance(batch, list):
-                batch = []
-
-        except (requests.exceptions.RequestException, ValueError) as exc:
-            print(
-                f"[Polymarket] Fetch stopped: {exc}. "
-                f"Keeping {len(markets)} markets already fetched."
-            )
-            break
+    def add_unique(
+        target: List[Dict[str, Any]],
+        seen: Set[str],
+        batch: Any,
+    ) -> int:
+        if not isinstance(batch, list):
+            return 0
 
         added = 0
         for market in batch:
             if not isinstance(market, dict):
                 continue
-            # The endpoint already filters closed=false. Keep only active
-            # markets when the field is present.
+            if market.get("closed") is True:
+                continue
             if market.get("active") is False:
                 continue
+
             market_id = str(
                 market.get("id")
                 or market.get("conditionId")
                 or market.get("slug")
+                or market.get("question")
                 or ""
             )
-            if not market_id or market_id in seen_ids:
+            if not market_id or market_id in seen:
                 continue
-            seen_ids.add(market_id)
-            markets.append(market)
+
+            seen.add(market_id)
+            target.append(market)
             added += 1
-            if len(markets) >= POLY_MAX_PAGES * POLY_LIMIT:
+
+            if len(target) >= POLY_MAX_PAGES * POLY_LIMIT:
+                break
+        return added
+
+    markets: List[Dict[str, Any]] = []
+    seen_ids: Set[str] = set()
+    cursor: Optional[str] = None
+    keyset_failed = False
+
+    # Official cursor-based endpoint.
+    for page in range(1, POLY_MAX_PAGES + 1):
+        params: Dict[str, Any] = {
+            "limit": min(POLY_LIMIT, 100),
+            "closed": "false",
+        }
+        if cursor:
+            params["after_cursor"] = cursor
+
+        print(f"[Polymarket] Keyset page {page}/{POLY_MAX_PAGES}...")
+
+        try:
+            resp = requests.get(
+                "https://gamma-api.polymarket.com/markets/keyset",
+                params=params,
+                headers=headers,
+                timeout=REQUEST_TIMEOUT,
+            )
+
+            if resp.status_code == 429 or resp.status_code >= 500:
+                resp = request_with_retry(
+                    "https://gamma-api.polymarket.com/markets/keyset",
+                    params,
+                )
+
+            if resp.status_code >= 400:
+                print(
+                    f"[Polymarket] Keyset HTTP {resp.status_code}: "
+                    f"{resp.text[:300]}"
+                )
+                keyset_failed = True
                 break
 
+            payload = resp.json()
+            if isinstance(payload, dict):
+                batch = payload.get("markets")
+                if batch is None:
+                    batch = payload.get("data", [])
+                next_cursor = payload.get("next_cursor")
+            elif isinstance(payload, list):
+                batch = payload
+                next_cursor = None
+            else:
+                print(
+                    "[Polymarket] Unexpected keyset payload type: "
+                    f"{type(payload).__name__}"
+                )
+                keyset_failed = True
+                break
+
+        except (requests.exceptions.RequestException, ValueError) as exc:
+            print(f"[Polymarket] Keyset request failed: {exc}")
+            keyset_failed = True
+            break
+
+        added = add_unique(markets, seen_ids, batch)
+        received = len(batch) if isinstance(batch, list) else 0
         print(
-            f"[Polymarket] Page {page}: {len(batch)} received, "
+            f"[Polymarket] Keyset page {page}: {received} received, "
             f"{added} added, total {len(markets)}"
         )
 
         if len(markets) >= POLY_MAX_PAGES * POLY_LIMIT:
             break
-
-        next_cursor = payload.get("next_cursor")
-        if not batch or not next_cursor or next_cursor == cursor:
+        if not batch:
+            break
+        if not next_cursor or str(next_cursor) == cursor:
             break
         cursor = str(next_cursor)
 
-    save_cache("polymarket_markets_v6_1_keyset.json", markets)
+    # Standard endpoint fallback. This is especially useful when keyset
+    # pagination is temporarily unavailable or not configured server-side.
+    if not markets or keyset_failed:
+        print(
+            "[Polymarket] Switching to standard /markets pagination "
+            f"(currently have {len(markets)} markets)."
+        )
+        offset = 0
+
+        for page in range(1, POLY_MAX_PAGES + 1):
+            params = {
+                "limit": min(POLY_LIMIT, 100),
+                "offset": offset,
+                "active": "true",
+                "closed": "false",
+            }
+            print(f"[Polymarket] Standard page {page}/{POLY_MAX_PAGES}...")
+
+            try:
+                resp = requests.get(
+                    "https://gamma-api.polymarket.com/markets",
+                    params=params,
+                    headers=headers,
+                    timeout=REQUEST_TIMEOUT,
+                )
+
+                if resp.status_code == 429 or resp.status_code >= 500:
+                    resp = request_with_retry(
+                        "https://gamma-api.polymarket.com/markets",
+                        params,
+                    )
+
+                if resp.status_code >= 400:
+                    print(
+                        f"[Polymarket] Standard HTTP {resp.status_code}: "
+                        f"{resp.text[:300]}"
+                    )
+                    break
+
+                payload = resp.json()
+                if isinstance(payload, list):
+                    batch = payload
+                elif isinstance(payload, dict):
+                    batch = payload.get("markets", payload.get("data", []))
+                else:
+                    batch = []
+
+            except (requests.exceptions.RequestException, ValueError) as exc:
+                print(f"[Polymarket] Standard request failed: {exc}")
+                break
+
+            added = add_unique(markets, seen_ids, batch)
+            received = len(batch) if isinstance(batch, list) else 0
+            print(
+                f"[Polymarket] Standard page {page}: {received} received, "
+                f"{added} added, total {len(markets)}"
+            )
+
+            if len(markets) >= POLY_MAX_PAGES * POLY_LIMIT:
+                break
+            if not isinstance(batch, list) or len(batch) < min(POLY_LIMIT, 100):
+                break
+            offset += min(POLY_LIMIT, 100)
+
+    save_cache(cache_name, markets)
     print(f"[Polymarket] Raw markets fetched: {len(markets)}")
     return markets
 
@@ -1130,6 +1245,69 @@ def parse_politics(
     pm.subtype = f"{office or 'unknown_office'}_{election_kind}"
 
 
+
+TEAM_COMPETITIONS = {
+    "world_series", "super_bowl", "nba_finals", "stanley_cup",
+    "champions_league", "premier_league", "college_football_playoff",
+}
+
+PLAYER_COMPETITIONS = {
+    "home_run_derby", "nl_mvp", "al_mvp", "nl_hank_aaron",
+    "al_hank_aaron", "nl_cy_young", "al_cy_young", "cy_young",
+    "gold_glove", "silver_slugger", "rookie_of_the_year",
+    "ballon_dor", "golf_round_matchup", "golf_tournament",
+}
+
+
+def infer_participant_type(pm: ParsedMarket) -> Optional[str]:
+    """Classify the resolution subject for candidate filtering."""
+    title = normalize_text(pm.title)
+
+    if pm.sport == "golf":
+        return "player"
+
+    if pm.competition in PLAYER_COMPETITIONS:
+        return "player"
+
+    if pm.competition in TEAM_COMPETITIONS:
+        return "team"
+
+    if pm.competition == "world_cup":
+        if re.search(bounded_alt("uefa", "concacaf", "afc", "caf", "conmebol", "ofc", "europe"), title):
+            return "region"
+        return "national_team"
+
+    if pm.market_type == "player_prop":
+        return "player"
+
+    if pm.teams:
+        return "team"
+
+    if pm.player:
+        # Most winner markets with a two-word proper name are individual
+        # participants unless the exact competition is team-based.
+        return "participant"
+
+    return None
+
+
+def build_event_fingerprint(pm: ParsedMarket) -> str:
+    """Build a canonical event identity used for diagnostics and indexing."""
+    participant = pm.player or "+".join(sorted(pm.teams))
+    fields = [
+        pm.category,
+        pm.sport,
+        pm.league,
+        pm.competition,
+        pm.event_scope,
+        pm.participant_type,
+        participant,
+        str(pm.year or ""),
+        pm.market_type,
+    ]
+    return "|".join(str(value or "") for value in fields)
+
+
 def parse_sports(
     pm: ParsedMarket,
     nt: str,
@@ -1162,11 +1340,15 @@ def parse_sports(
         pm.market_type = "event"
 
     pm.subtype = competition or f"{sport}_{pm.market_type}"
+    pm.participant_type = infer_participant_type(pm)
+    pm.event_fingerprint = build_event_fingerprint(pm)
 
     if pm.competition is None:
         pm.parser_notes.append("sports_missing_competition")
     if pm.market_type == "winner" and not (pm.player or pm.teams):
         pm.parser_notes.append("sports_missing_participant")
+    if pm.participant_type is None:
+        pm.parser_notes.append("sports_missing_participant_type")
 
 
 def parse_economy(pm: ParsedMarket, nt: str) -> None:
@@ -1261,10 +1443,20 @@ def index_keys(m: ParsedMarket) -> Set[str]:
             keys.add(f"sports|player|{m.player}")
         if m.sport and m.market_type:
             keys.add(f"sports|sporttype|{m.sport}|{m.market_type}")
+        if m.participant_type:
+            keys.add(f"sports|participanttype|{m.participant_type}")
         if m.competition and m.player:
             keys.add(f"sports|competitionplayer|{m.competition}|{m.player}")
+        if m.competition and m.participant_type:
+            keys.add(
+                f"sports|competitiontype|{m.competition}|{m.participant_type}"
+            )
+        if m.competition and m.year:
+            keys.add(f"sports|competitionyear|{m.competition}|{m.year}")
         if m.league and m.year:
             keys.add(f"sports|leagueyear|{m.league}|{m.year}")
+        if m.event_fingerprint:
+            keys.add(f"sports|fingerprint|{m.event_fingerprint}")
 
     elif m.category == "economy":
         keys.add(f"economy|subtype|{m.subtype}")
@@ -1301,6 +1493,66 @@ def build_index(markets: Sequence[ParsedMarket]) -> Dict[str, List[ParsedMarket]
     return idx
 
 
+
+def candidate_compatible(k: ParsedMarket, p: ParsedMarket) -> bool:
+    """Cheap hard filters applied before full scoring.
+
+    This prevents obviously unrelated markets from becoming debug candidates,
+    while retaining pairs with incomplete metadata for REVIEW.
+    """
+    if k.category != p.category or k.market_type != p.market_type:
+        return False
+
+    if k.year and p.year and k.year != p.year:
+        return False
+
+    if k.category == "sports":
+        if k.sport and p.sport and k.sport != p.sport:
+            return False
+        if k.league and p.league and k.league != p.league:
+            return False
+        if k.competition and p.competition and k.competition != p.competition:
+            return False
+        if (
+            k.participant_type
+            and p.participant_type
+            and k.participant_type != p.participant_type
+        ):
+            return False
+        if k.event_scope and p.event_scope and k.event_scope != p.event_scope:
+            return False
+
+        # When both participants are known, require identity before full scoring.
+        if k.player and p.player and k.player != p.player:
+            return False
+        if k.teams and p.teams and set(k.teams) != set(p.teams):
+            return False
+
+    elif k.category == "politics":
+        if k.country and p.country and k.country != p.country:
+            return False
+        if k.state and p.state and k.state != p.state:
+            return False
+        if k.office and p.office and k.office != p.office:
+            return False
+        if k.candidate and p.candidate and k.candidate != p.candidate:
+            return False
+
+    elif k.category == "crypto":
+        if k.asset and p.asset and k.asset != p.asset:
+            return False
+
+    elif k.category == "economy":
+        if k.metric and p.metric and k.metric != p.metric:
+            return False
+        if k.country and p.country and k.country != p.country:
+            return False
+        if k.period and p.period and k.period != p.period:
+            return False
+
+    return True
+
+
 def candidate_pairs(kalshi: Sequence[ParsedMarket], poly: Sequence[ParsedMarket]) -> List[CandidatePair]:
     poly_index = build_index(poly)
     raw_scores: Dict[Tuple[str, str], Tuple[ParsedMarket, ParsedMarket, int]] = {}
@@ -1312,7 +1564,7 @@ def candidate_pairs(kalshi: Sequence[ParsedMarket], poly: Sequence[ParsedMarket]
 
         for key in keys:
             for p in poly_index.get(key, []):
-                if p.category != k.category:
+                if not candidate_compatible(k, p):
                     continue
                 pair_id = (k.source_id, p.source_id)
                 if pair_id not in raw_scores:
@@ -1577,6 +1829,19 @@ def score_sports(k: ParsedMarket, p: ParsedMarket) -> Tuple[int, bool, List[str]
         score += 3
         reasons.append(f"one side missing league metadata: {k.league} vs {p.league} (+3)")
 
+
+    if k.participant_type and p.participant_type:
+        if k.participant_type != p.participant_type:
+            rejects.append(
+                f"participant_type mismatch: "
+                f"{k.participant_type} vs {p.participant_type}"
+            )
+            return score, False, reasons, rejects
+        score += 10
+        reasons.append(
+            f"same participant_type: {k.participant_type} (+10)"
+        )
+
     # Home Run Derby, MVP, Cy Young, World Series, etc. are different
     # resolution events even when the same athlete appears.
     if k.competition and p.competition:
@@ -1795,6 +2060,8 @@ def compact_fields(m: ParsedMarket) -> str:
         "league": m.league,
         "competition": m.competition,
         "event_scope": m.event_scope,
+        "participant_type": m.participant_type,
+        "event_fingerprint": m.event_fingerprint,
         "teams": m.teams,
         "player": m.player,
     }

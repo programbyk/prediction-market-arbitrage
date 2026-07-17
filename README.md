@@ -69,3 +69,45 @@ Run:
 python -m pytest tests/test_helpers.py tests/test_knowledge.py
 python main.py --no-cache --show-candidates 5
 ```
+
+
+### Step 2.2.2 — Polymarket HTTP 422 ordering fix
+
+Polymarket rejected `order=volume_num` with:
+
+```text
+422 validation_error: order fields are not valid
+```
+
+The custom `order` and `ascending` parameters were removed from both the
+keyset and standard market requests. Pagination now uses the API's default
+ordering.
+
+Run:
+
+```bash
+python tests/diagnose_polymarket.py
+python main.py --no-cache --show-candidates 5
+```
+
+
+## V6.2 — Event identity candidate filtering
+
+V6.2 adds:
+
+- `participant_type`
+- canonical `event_fingerprint`
+- hard candidate prefilters before full scoring
+- strong golf/PGA detection before generic FIFA aliases
+- competition + participant-type indexes
+- tests for the `Fifa Laopakdee` false candidate
+
+Run:
+
+```bash
+python -m pytest tests/test_helpers.py tests/test_knowledge.py tests/test_v62_identity.py
+python main.py --no-cache --show-candidates 10
+```
+
+Expected effect: candidate comparisons should decrease, while exact event
+pairs remain eligible for ACCEPTED or REVIEW.
