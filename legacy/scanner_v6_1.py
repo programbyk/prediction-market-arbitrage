@@ -1147,18 +1147,22 @@ def parse_market(platform: str, raw: Dict[str, Any]) -> ParsedMarket:
 
 def parse_common(pm: ParsedMarket) -> None:
     source_text = pm.title
-    nt = normalize_text(source_text)
+    display_text = source_text.split("|", 1)[0].strip()
+    nt = normalize_text(display_text)
+
+    # Only human-facing market text determines semantic identity.
+    # Tickers and diagnostic metadata may contain accidental tokens such as
+    # UCL, SOL, FIFA, etc. and must not classify the market.
     pm.year = parse_year(nt)
     pm.entities = important_words(nt)
 
-    display_text = source_text.split('|', 1)[0]
     asset = extract_asset(display_text)
-    sport, league, competition = detect_sports_identity(source_text)
+    sport, league, competition = detect_sports_identity(display_text)
     office = extract_office(nt)
     party = extract_party(nt)
-    state = extract_state(source_text)
-    candidate = extract_candidate(source_text)
-    country = extract_country(source_text, state)
+    state = extract_state(display_text)
+    candidate = extract_candidate(display_text)
+    country = extract_country(display_text, state)
 
     if asset:
         parse_crypto(pm, nt, asset)

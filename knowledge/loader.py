@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -63,16 +64,35 @@ class KnowledgeBase:
         return index
 
     @staticmethod
-    def _longest_match(text: str, index: Dict[str, Any]) -> Optional[Any]:
+    def _alias_matches(normalized_text: str, alias: str) -> bool:
+        """Match aliases as complete tokens or complete phrases.
+
+        V6.2 used a plain substring check. That caused short aliases such as
+        "ucl" to match inside unrelated words like "nuclear", incorrectly
+        classifying political markets as UEFA Champions League markets.
+        """
+        normalized_alias = normalize_text(alias).replace("_", " ").strip()
+        if not normalized_alias:
+            return False
+
+        pattern = (
+            r"(?<![a-z0-9])"
+            + re.escape(normalized_alias).replace(r"\ ", r"\s+")
+            + r"(?![a-z0-9])"
+        )
+        return re.search(pattern, normalized_text) is not None
+
+    @classmethod
+    def _longest_match(cls, text: str, index: Dict[str, Any]) -> Optional[Any]:
         normalized = normalize_text(text)
         matches = [
             (alias, value)
             for alias, value in index.items()
-            if alias and alias in normalized
+            if cls._alias_matches(normalized, alias)
         ]
         if not matches:
             return None
-        return max(matches, key=lambda item: len(item[0]))[1]
+        return max(matches, key=lambda item: len(normalize_text(item[0])))[1]
 
     def resolve_sports_identity(self, text: str) -> Optional[SportsIdentity]:
         return self._longest_match(text, self._sports_aliases)

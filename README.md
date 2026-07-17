@@ -111,3 +111,23 @@ python main.py --no-cache --show-candidates 10
 
 Expected effect: candidate comparisons should decrease, while exact event
 pairs remain eligible for ACCEPTED or REVIEW.
+
+
+## V6.2.1 — Parser isolation and boundary-safe aliases
+
+Fixes the observed false classification where:
+
+- `nuclear` accidentally matched the alias `ucl`
+- political markets inherited `champions_league`, `uefa`, and `soccer`
+- ticker or diagnostic metadata influenced semantic classification
+
+Knowledge aliases now match complete words or phrases. Category detection now
+uses only the human-facing market question/title; ticker metadata remains
+available only for diagnostics.
+
+Run:
+
+```bash
+python -m pytest tests/test_helpers.py tests/test_knowledge.py tests/test_v62_identity.py tests/test_v621_parser_isolation.py
+python main.py --no-cache --show-candidates 10
+```
