@@ -1,0 +1,57 @@
+{
+  "metrics": {
+    "unemployment_rate": [
+      "unemployment rate",
+      "unemployment"
+    ],
+    "payrolls": [
+      "nonfarm payrolls",
+      "payrolls",
+      "jobs report",
+      "jobs added"
+    ],
+    "inflation_rate": [
+      "consumer price index",
+      "cpi",
+      "inflation rate",
+      "inflation"
+    ],
+    "interest_rate": [
+      "interest rate",
+      "fed funds rate",
+      "federal funds rate",
+      "rate cut",
+      "rate hike"
+    ],
+    "gdp": [
+      "gross domestic product",
+      "gdp"
+    ]
+  },
+  "comparisons": {
+    "at_least": [
+      "at least",
+      "no less than",
+      "greater than or equal to"
+    ],
+    "at_most": [
+      "at most",
+      "no more than",
+      "less than or equal to"
+    ],
+    "strictly_above": [
+      "above",
+      "over",
+      "exceed",
+      "exceeds",
+      "greater than",
+      "more than"
+    ],
+    "strictly_below": [
+      "below",
+      "under",
+      "less than",
+      "fewer than"
+    ]
+  }
+}

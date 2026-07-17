@@ -1,0 +1,45 @@
+{
+  "assets": {
+    "bitcoin": [
+      "bitcoin",
+      "btc",
+      "xbt"
+    ],
+    "ethereum": [
+      "ethereum",
+      "eth"
+    ],
+    "solana": [
+      "solana",
+      "sol"
+    ],
+    "xrp": [
+      "xrp",
+      "ripple"
+    ],
+    "dogecoin": [
+      "dogecoin",
+      "doge"
+    ],
+    "cardano": [
+      "cardano",
+      "ada"
+    ],
+    "binance_coin": [
+      "binance coin",
+      "bnb"
+    ]
+  },
+  "contexts": [
+    "crypto",
+    "cryptocurrency",
+    "token",
+    "coin",
+    "blockchain",
+    "market cap",
+    "price",
+    "etf",
+    "all time high",
+    "ath"
+  ]
+}

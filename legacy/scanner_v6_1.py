@@ -64,6 +64,18 @@ except Exception:
     fuzz = None
 
 
+from knowledge.loader import get_knowledge_base
+from utils.helpers import (
+    bounded_alt,
+    important_words,
+    normalize_text,
+    parse_json_maybe,
+    parse_number,
+    parse_year,
+    safe_float,
+    words,
+)
+
 # -----------------------------
 # Config
 # -----------------------------
@@ -299,62 +311,18 @@ GENERIC_POLITICS_ENTITIES = {
 # Utility functions
 # -----------------------------
 
-def bounded_alt(*alternatives: str) -> str:
-    return r"\b(?:" + "|".join(alternatives) + r")\b"
 
 
-def normalize_text(text: str) -> str:
-    text = text or ""
-    text = text.replace("\u2019", "'").replace("\u2013", "-").replace("\u2014", "-")
-    # Convert accented names to stable ASCII forms: Raphaël -> Raphael, Éric -> Eric.
-    text = unicodedata.normalize("NFKD", text)
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    text = text.lower().replace(",", "")
-    text = re.sub(r"[^a-z0-9$%\.\-\s']+", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
 
 
-def words(text: str) -> List[str]:
-    return re.findall(r"[a-zA-Z0-9']+", normalize_text(text))
 
 
-def important_words(text: str) -> Set[str]:
-    return {w for w in words(text) if len(w) > 3 and w not in STOPWORDS}
 
 
-def parse_year(text: str) -> Optional[int]:
-    years = re.findall(r"\b(20[2-4][0-9])\b", text)
-    return int(years[0]) if years else None
 
 
-def apply_magnitude(value: float, suffix: Optional[str]) -> float:
-    if suffix == "k":
-        return value * 1_000
-    if suffix == "m":
-        return value * 1_000_000
-    if suffix == "b":
-        return value * 1_000_000_000
-    return value
 
 
-def parse_number(text: str) -> Optional[float]:
-    t = normalize_text(text)
-    dollar = re.search(r"\$\s?(\d+(?:\.\d+)?)\s?(k|m|b)?\b", t)
-    if dollar:
-        return apply_magnitude(float(dollar.group(1)), dollar.group(2))
-    percent = re.search(r"\b(\d+(?:\.\d+)?)\s?%", t)
-    if percent:
-        return float(percent.group(1))
-    suffixed = re.search(r"\b(\d+(?:\.\d+)?)\s?(k|m|b)\b", t)
-    if suffixed:
-        return apply_magnitude(float(suffixed.group(1)), suffixed.group(2))
-    for m in re.finditer(r"\b(\d+(?:\.\d+)?)\b", t):
-        token = m.group(1)
-        if re.match(r"^20[2-4][0-9]$", token):
-            continue
-        return float(token)
-    return None
 
 
 def extract_state(text: str) -> Optional[str]:
@@ -650,7 +618,15 @@ LEAGUE_PATTERNS = [
 
 
 def detect_sports_identity(text: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
-    """Return sport, league and exact competition."""
+    """Return sport, league and exact competition.
+
+    Stage 2.2 first checks the JSON knowledge base. Existing regex rules remain
+    as a fallback so the migration does not reduce current coverage.
+    """
+    identity = get_knowledge_base().resolve_sports_identity(text)
+    if identity:
+        return identity.sport, identity.league, identity.competition
+
     t = normalize_text(text)
 
     for pattern, competition, sport, league in SPORT_COMPETITIONS:
@@ -715,23 +691,8 @@ def sports_event_scope(text: str) -> Optional[str]:
     return None
 
 
-def safe_float(value: Any) -> Optional[float]:
-    if value is None or value == "":
-        return None
-    try:
-        f = float(value)
-        return f if f >= 0 else None
-    except Exception:
-        return None
 
 
-def parse_json_maybe(value: Any) -> Any:
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except Exception:
-            return value
-    return value
 
 
 # -----------------------------

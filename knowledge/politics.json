@@ -1,0 +1,44 @@
+{
+  "offices": {
+    "president": [
+      "president",
+      "presidential",
+      "white house"
+    ],
+    "governor": [
+      "governor",
+      "gubernatorial"
+    ],
+    "senate": [
+      "senate",
+      "senator"
+    ],
+    "house": [
+      "house",
+      "representative",
+      "congress",
+      "congressional"
+    ],
+    "mayor": [
+      "mayor",
+      "mayoral"
+    ]
+  },
+  "stages": {
+    "primary": [
+      "primary",
+      "party primary"
+    ],
+    "general": [
+      "general election"
+    ],
+    "runoff": [
+      "runoff",
+      "second round"
+    ],
+    "nomination": [
+      "nominee",
+      "nomination"
+    ]
+  }
+}

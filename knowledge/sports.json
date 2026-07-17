@@ -1,0 +1,199 @@
+{
+  "competitions": {
+    "home_run_derby": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "home run derby",
+        "hr derby",
+        "home-run derby"
+      ]
+    },
+    "world_series": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "world series",
+        "mlb championship"
+      ]
+    },
+    "nl_mvp": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "nl mvp",
+        "national league mvp",
+        "national league most valuable player"
+      ]
+    },
+    "al_mvp": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "al mvp",
+        "american league mvp",
+        "american league most valuable player"
+      ]
+    },
+    "nl_hank_aaron": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "nl hank aaron award",
+        "national league hank aaron award",
+        "hank aaron award national league"
+      ]
+    },
+    "al_hank_aaron": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "al hank aaron award",
+        "american league hank aaron award",
+        "hank aaron award american league"
+      ]
+    },
+    "nl_cy_young": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "nl cy young",
+        "national league cy young"
+      ]
+    },
+    "al_cy_young": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "al cy young",
+        "american league cy young"
+      ]
+    },
+    "gold_glove": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "gold glove",
+        "gold glove award"
+      ]
+    },
+    "silver_slugger": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "silver slugger",
+        "silver slugger award"
+      ]
+    },
+    "rookie_of_the_year": {
+      "sport": "baseball",
+      "league": "mlb",
+      "aliases": [
+        "rookie of the year",
+        "roy award"
+      ]
+    },
+    "super_bowl": {
+      "sport": "american_football",
+      "league": "nfl",
+      "aliases": [
+        "super bowl",
+        "nfl championship"
+      ]
+    },
+    "college_football_playoff": {
+      "sport": "american_football",
+      "league": "ncaa",
+      "aliases": [
+        "college football playoff",
+        "cfp championship"
+      ]
+    },
+    "nba_finals": {
+      "sport": "basketball",
+      "league": "nba",
+      "aliases": [
+        "nba finals",
+        "nba championship"
+      ]
+    },
+    "stanley_cup": {
+      "sport": "hockey",
+      "league": "nhl",
+      "aliases": [
+        "stanley cup",
+        "nhl championship"
+      ]
+    },
+    "champions_league": {
+      "sport": "soccer",
+      "league": "uefa",
+      "aliases": [
+        "champions league",
+        "uefa champions league",
+        "ucl"
+      ]
+    },
+    "world_cup": {
+      "sport": "soccer",
+      "league": "fifa",
+      "aliases": [
+        "world cup",
+        "fifa world cup"
+      ]
+    },
+    "premier_league": {
+      "sport": "soccer",
+      "league": "epl",
+      "aliases": [
+        "premier league",
+        "english premier league",
+        "epl"
+      ]
+    },
+    "ballon_dor": {
+      "sport": "soccer",
+      "league": "international",
+      "aliases": [
+        "ballon d'or",
+        "ballon dor"
+      ]
+    }
+  },
+  "leagues": {
+    "mlb": [
+      "mlb",
+      "major league baseball"
+    ],
+    "nfl": [
+      "nfl",
+      "national football league"
+    ],
+    "nba": [
+      "nba",
+      "national basketball association"
+    ],
+    "wnba": [
+      "wnba"
+    ],
+    "nhl": [
+      "nhl",
+      "national hockey league"
+    ],
+    "ncaa": [
+      "ncaa",
+      "college football",
+      "college basketball"
+    ],
+    "uefa": [
+      "uefa"
+    ],
+    "fifa": [
+      "fifa"
+    ],
+    "epl": [
+      "premier league",
+      "epl"
+    ]
+  }
+}
