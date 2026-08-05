@@ -1,0 +1,175 @@
+{
+  "broadcast_mention": [
+    "what will the announcers say",
+    "announcers mention",
+    "broadcast mention"
+  ],
+  "postseason_qualification": [
+    "clinch a spot in the postseason",
+    "make the postseason",
+    "qualify for the postseason"
+  ],
+  "playoff_host": [
+    "host a playoff game",
+    "host playoff game"
+  ],
+  "playoff_seed": [
+    "playoff seed",
+    "number one seed",
+    "number 1 seed",
+    "#1 seed"
+  ],
+  "division_winner": [
+    "division winner",
+    "win the division"
+  ],
+  "conference_winner": [
+    "conference winner",
+    "win the conference"
+  ],
+  "super_bowl_winner": [
+    "win the super bowl",
+    "super bowl winner"
+  ],
+  "world_series_winner": [
+    "win the world series",
+    "world series winner"
+  ],
+  "relegation": [
+    "be relegated",
+    "relegation"
+  ],
+  "promotion": [
+    "be promoted",
+    "promotion"
+  ],
+  "top_four_finish": [
+    "finish top 4",
+    "finish in the top four",
+    "top four finish"
+  ],
+  "top_six_finish": [
+    "finish top 6",
+    "finish in the top six",
+    "top six finish"
+  ],
+  "champions_league_qualification": [
+    "qualify for the champions league",
+    "champions league qualification"
+  ],
+  "team_of_the_year": [
+    "team of the year",
+    "pfa team of the year"
+  ],
+  "top_scorer": [
+    "golden boot",
+    "top scorer",
+    "most goals"
+  ],
+  "most_sacks": [
+    "most sacks",
+    "sack leader",
+    "lead the league in sacks"
+  ],
+  "most_touchdowns": [
+    "most touchdowns",
+    "touchdown leader",
+    "lead the league in touchdowns"
+  ],
+  "most_passing_yards": [
+    "most passing yards",
+    "passing yards leader"
+  ],
+  "most_rushing_yards": [
+    "most rushing yards",
+    "rushing yards leader"
+  ],
+  "most_receiving_yards": [
+    "most receiving yards",
+    "receiving yards leader"
+  ],
+  "mvp": [
+    "mvp",
+    "most valuable player"
+  ],
+  "cy_young": [
+    "cy young",
+    "cy young award"
+  ],
+  "hank_aaron_award": [
+    "hank aaron award"
+  ],
+  "home_run_derby": [
+    "home run derby",
+    "hr derby"
+  ],
+  "retirement": [
+    "retire",
+    "retirement"
+  ],
+  "team_move": [
+    "join a team",
+    "joining a team",
+    "sign with a team",
+    "signing with a team"
+  ],
+  "trade": [
+    "be traded",
+    "trade",
+    "traded"
+  ],
+  "coach_fired": [
+    "coach fired",
+    "coach sacked",
+    "coach dismissed",
+    "manager fired",
+    "manager sacked"
+  ],
+  "first_half_btts": [
+    "both teams to score in the first half",
+    "1st half both teams to score"
+  ],
+  "both_teams_to_score": [
+    "both teams to score",
+    "btts"
+  ],
+  "total_maps": [
+    "total maps",
+    "over 2.5 maps",
+    "under 2.5 maps"
+  ],
+  "map_winner": [
+    "map 1 winner",
+    "map 2 winner",
+    "map 3 winner",
+    "win map 1",
+    "win map 2",
+    "win map 3"
+  ],
+  "series_winner": [
+    "series winner",
+    "win the series"
+  ],
+  "match_winner": [
+    "match winner",
+    "win the match",
+    "beat",
+    "defeat"
+  ],
+  "team_total": [
+    "team total"
+  ],
+  "player_total": [
+    "player total"
+  ],
+  "first_inning": [
+    "first inning",
+    "1st inning"
+  ],
+  "no_hitter": [
+    "no hitter"
+  ],
+  "grand_slam": [
+    "grand slam"
+  ]
+}

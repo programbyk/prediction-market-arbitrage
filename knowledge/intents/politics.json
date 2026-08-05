@@ -1,0 +1,30 @@
+{
+  "primary_winner": [
+    "win the primary",
+    "primary winner",
+    "primary election"
+  ],
+  "nomination": [
+    "win the nomination",
+    "be the nominee",
+    "nominee"
+  ],
+  "approval_rating": [
+    "approval rating"
+  ],
+  "election_margin": [
+    "margin of victory",
+    "win by",
+    "percentage points"
+  ],
+  "chamber_control": [
+    "control of the senate",
+    "control of the house",
+    "control congress"
+  ],
+  "election_winner": [
+    "win the election",
+    "be elected",
+    "election winner"
+  ]
+}

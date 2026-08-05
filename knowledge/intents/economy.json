@@ -1,0 +1,31 @@
+{
+  "rate_cut": [
+    "rate cut",
+    "cut interest rates"
+  ],
+  "rate_hike": [
+    "rate hike",
+    "raise interest rates"
+  ],
+  "recession": [
+    "recession"
+  ],
+  "unemployment_threshold": [
+    "unemployment rate",
+    "unemployment above",
+    "unemployment below"
+  ],
+  "inflation_threshold": [
+    "inflation",
+    "cpi"
+  ],
+  "gdp_threshold": [
+    "gdp",
+    "gross domestic product"
+  ],
+  "payrolls_threshold": [
+    "payrolls",
+    "jobs report",
+    "jobs added"
+  ]
+}

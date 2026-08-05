@@ -326,3 +326,52 @@ Run V7 tests:
 ```bash
 python -m pytest tests/test_v7_event_graph.py
 ```
+
+
+## V7.1 — Semantic Core
+
+V7.1 separates market understanding into three engines:
+
+```text
+core/entity_engine.py
+core/intent_engine.py
+core/event_engine.py
+```
+
+Intent aliases now live outside Python:
+
+```text
+knowledge/intents/sports.json
+knowledge/intents/politics.json
+knowledge/intents/crypto.json
+knowledge/intents/economy.json
+```
+
+To add a new intent or phrase, edit the corresponding JSON file instead of
+changing matcher code.
+
+The Event Graph now compares structured EventObjects containing:
+
+```text
+category
+entity
+intent
+year
+sport / league / competition
+threshold / direction
+country / state / office
+period
+```
+
+Run:
+
+```bash
+python -m pytest tests/test_v71_semantic_core.py
+python main.py --show-candidates 20
+```
+
+A full fresh scan:
+
+```bash
+python main.py --no-cache --show-candidates 20
+```

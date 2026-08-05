@@ -1,0 +1,23 @@
+{
+  "market_cap_threshold": [
+    "market cap",
+    "market capitalization"
+  ],
+  "etf_approval": [
+    "etf approval",
+    "etf approved",
+    "approve the etf"
+  ],
+  "all_time_high": [
+    "all time high",
+    "ath"
+  ],
+  "price_threshold": [
+    "price above",
+    "price below",
+    "reach $",
+    "exceed $",
+    "over $",
+    "under $"
+  ]
+}
