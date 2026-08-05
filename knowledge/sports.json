@@ -217,5 +217,56 @@
       "pga tour",
       "professional golfers association"
     ]
+  },
+  "event_kinds": {
+    "relegation": [
+      "relegated",
+      "relegation"
+    ],
+    "promotion": [
+      "promoted",
+      "promotion"
+    ],
+    "team_of_the_year": [
+      "team of the year",
+      "pfa team of the year"
+    ],
+    "top_scorer_award": [
+      "golden boot",
+      "top scorer"
+    ],
+    "championship_winner": [
+      "win the league",
+      "win the title",
+      "champion"
+    ],
+    "champions_league_qualification": [
+      "qualify for champions league"
+    ],
+    "top_four_finish": [
+      "finish top 4",
+      "top four finish"
+    ],
+    "top_six_finish": [
+      "finish top 6",
+      "top six finish"
+    ],
+    "retirement": [
+      "retire",
+      "retirement"
+    ],
+    "trade": [
+      "trade",
+      "traded"
+    ],
+    "coach_fired": [
+      "fired",
+      "sacked",
+      "dismissed"
+    ],
+    "record_milestone": [
+      "break the record",
+      "set a record"
+    ]
   }
 }

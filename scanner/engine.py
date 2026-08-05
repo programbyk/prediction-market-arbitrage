@@ -14,12 +14,52 @@ from legacy.scanner_v6_1 import (
     print_match,
 )
 from matcher.matcher import find_matches
+from matcher.event_graph import find_event_graph_matches, export_event_graph
 from parsers.parser import parse_market_collection
+from parsers.diagnostics import run_parser_diagnostics
+from matcher.overlap_analyzer import analyze_overlap
 
-def run_scan(use_cache: bool = True) -> None:
+
+def print_cross_platform_coverage(kalshi, poly) -> None:
+    """Print category counts before matching."""
+    categories = sorted(
+        {market.category for market in kalshi}
+        | {market.category for market in poly}
+    )
+
+    print("\nCross-platform category coverage:")
+    for category in categories:
+        kalshi_count = sum(1 for market in kalshi if market.category == category)
+        poly_count = sum(1 for market in poly if market.category == category)
+        possible_overlap = min(kalshi_count, poly_count)
+        print(
+            f"  - {category}: Kalshi={kalshi_count}, "
+            f"Polymarket={poly_count}, theoretical max overlap={possible_overlap}"
+        )
+
+
+def run_scan(
+    use_cache: bool = True,
+    *,
+    diagnose_parser: bool = False,
+    diagnostic_limit: int = 15,
+    diagnostic_export_dir: str = "exports",
+    analyze_overlap_mode: bool = False,
+    overlap_min_score: int = 45,
+    overlap_top_per_market: int = 5,
+    overlap_samples: int = 20,
+    legacy_matcher: bool = False,
+) -> None:
     print("Prediction Market Arbitrage Scanner")
     print(f"Started: {datetime.now(timezone.utc).isoformat()}")
-    print("Mode: modular V6.1 compatibility architecture")
+    if analyze_overlap_mode:
+        print("Mode: V6.6 cross-platform overlap analyzer")
+    elif diagnose_parser:
+        print("Mode: V6.5 parser diagnostics")
+    elif legacy_matcher:
+        print("Mode: legacy strict matcher")
+    else:
+        print("Mode: V7 Event Graph Engine")
 
     kalshi_raw = fetch_kalshi_markets(use_cache=use_cache)
     poly_raw = fetch_polymarket_markets(use_cache=use_cache)
@@ -29,8 +69,43 @@ def run_scan(use_cache: bool = True) -> None:
 
     print_market_summary("Kalshi", kalshi)
     print_market_summary("Polymarket", poly)
+    print_cross_platform_coverage(kalshi, poly)
 
-    matches, review_matches, candidates = find_matches(kalshi, poly)
+    if diagnose_parser:
+        run_parser_diagnostics(
+            kalshi,
+            poly,
+            sample_limit=max(1, diagnostic_limit),
+            export_dir=diagnostic_export_dir,
+        )
+        print("\nParser diagnosis complete. Matching was skipped.")
+        return
+
+    if analyze_overlap_mode:
+        analyze_overlap(
+            kalshi,
+            poly,
+            min_score=max(0, min(100, overlap_min_score)),
+            top_per_kalshi=max(1, overlap_top_per_market),
+            sample_limit=max(1, overlap_samples),
+            export_dir=diagnostic_export_dir,
+        )
+        print("\nOverlap analysis complete. Strict matching was skipped.")
+        return
+
+    if legacy_matcher:
+        matches, review_matches, candidates = find_matches(kalshi, poly)
+    else:
+        graph_path = export_event_graph(
+            kalshi,
+            poly,
+            export_dir=diagnostic_export_dir,
+        )
+        print(f"[EventGraph] Nodes exported to: {graph_path}")
+        matches, review_matches, candidates = find_event_graph_matches(
+            kalshi,
+            poly,
+        )
 
     print(f"\nAccepted matches: {len(matches)}")
     for i, match in enumerate(matches[:SHOW_TOP_MATCHES], 1):

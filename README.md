@@ -131,3 +131,198 @@ Run:
 python -m pytest tests/test_helpers.py tests/test_knowledge.py tests/test_v62_identity.py tests/test_v621_parser_isolation.py
 python main.py --no-cache --show-candidates 10
 ```
+
+
+## V6.2.2 — Sports event action and subject identity
+
+Generic sports events now extract:
+
+- `event_action`: retire, join_team, sign_team, trade, released, suspended, etc.
+- `event_subject`: the player/person whose action resolves the market
+
+This prevents markets about the same athlete but different real-world actions
+from becoming candidate matches.
+
+Example rejected before scoring:
+
+```text
+LeBron James joins an NBA team
+vs
+LeBron James retires
+```
+
+Run:
+
+```bash
+python -m pytest tests/test_v621_parser_isolation.py tests/test_v622_sports_events.py
+python main.py --no-cache --show-candidates 10
+```
+
+
+## V6.3 — Expanded coverage
+
+V6.3 raises the total scan target to:
+
+- Kalshi: up to 20 pages × 1,000 = 20,000 markets
+- Polymarket: up to 200 pages × 100 = 20,000 markets
+
+This is **20,000 total per platform**, not 20,000 in a single API request.
+The APIs impose smaller per-request limits, so pagination is required.
+
+The scanner also prints a cross-platform category coverage report before
+matching.
+
+Run:
+
+```bash
+python main.py --no-cache --show-candidates 10
+```
+
+A full fresh scan can take several minutes depending on network speed and API
+throttling.
+
+
+## V6.4 — Semantic Sports
+
+V6.4 adds `event_kind`, the exact proposition being resolved.
+
+Examples:
+
+- `relegation`
+- `promotion`
+- `team_of_the_year`
+- `top_scorer_award`
+- `championship_winner`
+- `champions_league_qualification`
+- `first_half_btts`
+- `retirement`
+- `trade`
+- `record_milestone`
+
+Candidate generation now rejects different event kinds before scoring. This
+prevents a Premier League relegation market from being compared with a PFA
+Team of the Year market merely because both share league and season.
+
+Run:
+
+```bash
+python -m pytest tests/test_v64_semantic_sports.py
+python main.py --no-cache --show-candidates 15
+```
+
+
+## V6.5 — Parser Diagnostics
+
+This version investigates why markets fall into `category="other"` before
+changing the parser.
+
+Run a fresh diagnosis:
+
+```bash
+python main.py --no-cache --diagnose-parser --diagnostic-limit 15
+```
+
+Or reuse the cache for a faster diagnosis:
+
+```bash
+python main.py --diagnose-parser --diagnostic-limit 15
+```
+
+The command:
+
+- skips matching and arbitrage calculations;
+- counts tradeable markets hidden inside `other`;
+- estimates whether each market is likely sports, politics, crypto,
+  economy, weather, entertainment, technology, geopolitics, or unknown;
+- prints the most common Kalshi series/event prefixes;
+- prints sample titles and the signals that triggered the diagnosis;
+- exports full reports to:
+
+```text
+exports/kalshi_parser_other_diagnostics.csv
+exports/polymarket_parser_other_diagnostics.csv
+```
+
+The CSV reports provide the evidence needed to decide which parser rules
+should be added in V6.6.
+
+
+## V6.6 — Cross-Platform Overlap Analyzer
+
+This mode searches broadly for possible shared coverage before applying the
+strict equivalence matcher.
+
+```bash
+python main.py --analyze-overlap --overlap-min-score 45 --overlap-top-per-market 5
+```
+
+Fresh 20,000 + 20,000 scan:
+
+```bash
+python main.py --no-cache --analyze-overlap --overlap-min-score 45 --overlap-top-per-market 5
+```
+
+Outputs:
+
+```text
+exports/overlap_candidates_all.csv
+exports/overlap_candidates_sports.csv
+exports/overlap_candidates_politics.csv
+exports/overlap_candidates_crypto.csv
+exports/overlap_candidates_economy.csv
+exports/overlap_summary.json
+```
+
+These are development candidates, not confirmed arbitrage matches.
+
+
+## V7.0 — Event Graph Engine
+
+V7 changes candidate generation from entity-only grouping to:
+
+```text
+category + entity + market_intent + year + event scope
+```
+
+Examples:
+
+```text
+New England Patriots + playoff_host
+New England Patriots + most_sacks
+```
+
+These now belong to different event nodes and are never compared.
+
+The Event Graph also compares **all** Polymarket contracts inside a compatible
+node against each Kalshi contract. A Kalshi market is therefore allowed to
+produce multiple relevant Polymarket options.
+
+Run the Event Graph Engine:
+
+```bash
+python main.py
+```
+
+Fresh 20,000 + 20,000 scan:
+
+```bash
+python main.py --no-cache --show-candidates 20
+```
+
+Inspect generated event nodes:
+
+```text
+exports/event_graph_nodes.csv
+```
+
+The old matcher remains available for comparison:
+
+```bash
+python main.py --legacy-matcher
+```
+
+Run V7 tests:
+
+```bash
+python -m pytest tests/test_v7_event_graph.py
+```

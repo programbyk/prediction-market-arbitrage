@@ -87,10 +87,10 @@ REQUEST_TIMEOUT = 20
 CACHE_DIR = "cache"
 CACHE_TTL_SECONDS = 180
 
-KALSHI_MAX_PAGES = 5
+KALSHI_MAX_PAGES = 20
 KALSHI_LIMIT = 1000
 
-POLY_MAX_PAGES = 50
+POLY_MAX_PAGES = 200
 POLY_LIMIT = 100
 
 MAX_RETRIES = 3
@@ -153,8 +153,17 @@ class ParsedMarket:
     league: Optional[str] = None
     competition: Optional[str] = None
     event_scope: Optional[str] = None
+    event_kind: Optional[str] = None
+    event_action: Optional[str] = None
+    event_subject: Optional[str] = None
     participant_type: Optional[str] = None
     event_fingerprint: Optional[str] = None
+
+    # V7 Event Graph identity
+    market_intent: Optional[str] = None
+    entity_key: Optional[str] = None
+    event_object_key: Optional[str] = None
+
     teams: Tuple[str, ...] = field(default_factory=tuple)
     player: Optional[str] = None
 
@@ -919,6 +928,11 @@ def fetch_polymarket_markets(use_cache: bool = True) -> List[Dict[str, Any]]:
             f"[Polymarket] Keyset page {page}: {received} received, "
             f"{added} added, total {len(markets)}"
         )
+        if page % 10 == 0:
+            print(
+                f"[Polymarket] Progress checkpoint: "
+                f"{len(markets)}/20000 raw markets"
+            )
 
         if len(markets) >= POLY_MAX_PAGES * POLY_LIMIT:
             break
@@ -985,6 +999,11 @@ def fetch_polymarket_markets(use_cache: bool = True) -> List[Dict[str, Any]]:
                 f"[Polymarket] Standard page {page}: {received} received, "
                 f"{added} added, total {len(markets)}"
             )
+            if page % 10 == 0:
+                print(
+                    f"[Polymarket] Progress checkpoint: "
+                    f"{len(markets)}/20000 raw markets"
+                )
 
             if len(markets) >= POLY_MAX_PAGES * POLY_LIMIT:
                 break
@@ -1263,12 +1282,188 @@ PLAYER_COMPETITIONS = {
 }
 
 
+
+
+SPORTS_EVENT_KIND_PATTERNS = [
+    # Match-level markets
+    (r"\bboth teams (?:to )?score\b.*\b1st half\b|\b1st half\b.*\bboth teams (?:to )?score\b", "first_half_btts"),
+    (r"\bboth teams (?:to )?score\b|\bbtts\b", "both_teams_to_score"),
+    (r"\bmatch winner\b|\bwin the match\b|\bbeat\b|\bdefeat\b", "match_winner"),
+    (r"\bmap\s*\d+\b.*\bwin\b|\bwin\b.*\bmap\s*\d+\b", "map_winner"),
+    (r"\bseries winner\b|\bwin the series\b", "series_winner"),
+    (r"\btotal goals?\b|\bover \d+(?:\.\d+)? goals?\b|\bunder \d+(?:\.\d+)? goals?\b", "total_goals"),
+    (r"\bclean sheet\b", "clean_sheet"),
+    (r"\bscore first\b|\bfirst goal\b", "first_scorer"),
+    (r"\bcorrect score\b", "correct_score"),
+
+    # League/season outcomes
+    (r"\brelegat(?:e|ed|ion)\b", "relegation"),
+    (r"\bpromot(?:e|ed|ion)\b", "promotion"),
+    (r"\bqualif(?:y|ies|ied|ication)\b.*\bchampions league\b|\bchampions league\b.*\bqualif", "champions_league_qualification"),
+    (r"\bqualif(?:y|ies|ied|ication)\b.*\bplayoffs?\b|\bplayoffs?\b.*\bqualif", "playoff_qualification"),
+    (r"\bwin (?:the )?(?:league|title|championship)\b|\bleague winner\b|\bchampion\b", "championship_winner"),
+    (r"\bfinish (?:in )?top 4\b|\btop four\b", "top_four_finish"),
+    (r"\bfinish (?:in )?top 6\b|\btop six\b", "top_six_finish"),
+    (r"\bfinish last\b|\bbottom of (?:the )?league\b", "finish_last"),
+    (r"\bregular season wins?\b", "regular_season_wins"),
+
+    # Individual awards and honors
+    (r"\bteam of the year\b|\bpfa team of the year\b", "team_of_the_year"),
+    (r"\bgolden boot\b|\btop scorer\b|\bmost goals\b", "top_scorer_award"),
+    (r"\bplayer of the year\b|\bmost valuable player\b|\bmvp\b", "mvp_award"),
+    (r"\brookie of the year\b", "rookie_of_the_year_award"),
+    (r"\bcoach of the year\b|\bmanager of the year\b", "coach_of_the_year"),
+    (r"\bdefensive player of the year\b|\bdpoy\b", "defensive_player_of_year"),
+    (r"\bcy young\b", "cy_young_award"),
+    (r"\bhank aaron award\b", "hank_aaron_award"),
+    (r"\bgold glove\b", "gold_glove_award"),
+    (r"\bsilver slugger\b", "silver_slugger_award"),
+    (r"\bballon d[' ]?or\b", "ballon_dor_award"),
+
+    # Career/roster/status events
+    (r"\bretire(?:s|d|ment|ing)?\b", "retirement"),
+    (r"\bjoin(?:s|ed|ing)?\b.*\bteam\b|\bsign(?:s|ed|ing)?\b.*\bteam\b", "team_move"),
+    (r"\btrad(?:e|es|ed|ing)\b", "trade"),
+    (r"\bwaiv(?:e|es|ed|ing)\b|\breleas(?:e|es|ed|ing)\b", "release_or_waiver"),
+    (r"\bsuspend(?:s|ed|ing)?\b", "suspension"),
+    (r"\binjur(?:y|ed|ies)\b", "injury_status"),
+    (r"\breturn(?:s|ed|ing)?\b", "return_to_play"),
+    (r"\bfired\b|\bsacked\b|\bdismissed\b", "coach_fired"),
+
+    # Records/statistical milestones
+    (r"\bbreak (?:the )?record\b|\bset (?:a |the )?record\b|\brecord more\b", "record_milestone"),
+    (r"\bscore \d+\+? points?\b|\bpoints per game\b", "points_milestone"),
+    (r"\bscore \d+\+? goals?\b", "goals_milestone"),
+    (r"\bhit \d+\+? home runs?\b", "home_runs_milestone"),
+    (r"\bwin \d+\+? games?\b", "wins_milestone"),
+]
+
+
+def detect_sports_event_kind(text: str) -> Optional[str]:
+    """Return the exact semantic proposition type for a sports market."""
+    normalized = normalize_text(text)
+    for pattern, event_kind in SPORTS_EVENT_KIND_PATTERNS:
+        if re.search(pattern, normalized):
+            return event_kind
+    return None
+
+
+SPORTS_EVENT_ACTIONS = [
+    (r"\bretire(?:s|d|ment|ing)?\b", "retire"),
+    (r"\bjoin(?:s|ed|ing)?\b.*\bteam\b", "join_team"),
+    (r"\bsign(?:s|ed|ing)?\b.*\bteam\b", "sign_team"),
+    (r"\btrad(?:e|es|ed|ing)\b", "trade"),
+    (r"\bwaiv(?:e|es|ed|ing)\b", "waived"),
+    (r"\breleas(?:e|es|ed|ing)\b", "released"),
+    (r"\bsuspend(?:s|ed|ing)?\b", "suspended"),
+    (r"\binjur(?:y|ed|ies)\b", "injury"),
+    (r"\bannounce(?:s|d|ment|ing)?\b.*\breturn\b", "return"),
+    (r"\breturn(?:s|ed|ing)?\b", "return"),
+]
+
+
+def detect_sports_event_action(text: str) -> Optional[str]:
+    normalized = normalize_text(text)
+    for pattern, action in SPORTS_EVENT_ACTIONS:
+        if re.search(pattern, normalized):
+            return action
+    return None
+
+
+
+def extract_semantic_sports_entity(title: str, event_kind: Optional[str]) -> Optional[str]:
+    """Extract the team/player named in common semantic sports propositions."""
+    patterns_by_kind = {
+        "relegation": [
+            r"\bWill\s+(.+?)\s+be relegated\b",
+            r"\b(.+?)\s+to be relegated\b",
+        ],
+        "promotion": [
+            r"\bWill\s+(.+?)\s+be promoted\b",
+            r"\b(.+?)\s+to be promoted\b",
+        ],
+        "team_of_the_year": [
+            r"\bWill\s+(.+?)\s+be named to\b.*\bTeam of the Year\b",
+            r"\bWill\s+(.+?)\s+make\b.*\bTeam of the Year\b",
+        ],
+        "top_scorer_award": [
+            r"\bWill\s+(.+?)\s+(?:win|be)\b.*\b(?:Golden Boot|top scorer)\b",
+        ],
+        "championship_winner": [
+            r"\bWill\s+(.+?)\s+win\b",
+        ],
+        "top_four_finish": [
+            r"\bWill\s+(.+?)\s+finish\b.*\btop 4\b",
+        ],
+        "top_six_finish": [
+            r"\bWill\s+(.+?)\s+finish\b.*\btop 6\b",
+        ],
+        "champions_league_qualification": [
+            r"\bWill\s+(.+?)\s+qualif(?:y|ies)\b",
+        ],
+    }
+
+    for pattern in patterns_by_kind.get(event_kind or "", []):
+        match = re.search(pattern, title, flags=re.IGNORECASE)
+        if not match:
+            continue
+        value = normalize_text(match.group(1)).strip()
+        value = re.sub(r"\bthe\b", " ", value)
+        value = re.sub(r"\s+", " ", value).strip()
+        if value and len(value.split()) <= 7:
+            return value.replace(" ", "_")
+    return None
+
+
+def extract_sports_event_subject(title: str) -> Optional[str]:
+    """Extract the person whose action resolves a generic sports event."""
+    patterns = [
+        # "... announce that LeBron James is joining ..."
+        r"\bthat\s+([A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+){1,4})\s+is\s+"
+        r"(?:joining|signing|retiring|returning|being traded)",
+        # "Will LeBron James retire/join/sign/return ..."
+        r"\bWill\s+([A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+){1,4})\s+"
+        r"(?:retire|join|sign|return|be traded|be released|be suspended)",
+        # "LeBron James to retire/join ..."
+        r"\b([A-Z][A-Za-z'.-]+(?:\s+[A-Z][A-Za-z'.-]+){1,4})\s+to\s+"
+        r"(?:retire|join|sign|return|be traded)",
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, title)
+        if not match:
+            continue
+        subject = normalize_text(match.group(1)).replace(" ", "_")
+        if subject:
+            return subject
+    return None
+
+
 def infer_participant_type(pm: ParsedMarket) -> Optional[str]:
     """Classify the resolution subject for candidate filtering."""
     title = normalize_text(pm.title)
 
+    if pm.event_subject:
+        return "player"
+
     if pm.sport == "golf":
         return "player"
+
+    if pm.event_kind in {
+        "team_of_the_year", "top_scorer_award", "mvp_award",
+        "rookie_of_the_year_award", "coach_of_the_year",
+        "defensive_player_of_year", "cy_young_award",
+        "hank_aaron_award", "gold_glove_award",
+        "silver_slugger_award", "ballon_dor_award",
+    }:
+        return "player"
+
+    if pm.event_kind in {
+        "relegation", "promotion", "champions_league_qualification",
+        "playoff_qualification", "championship_winner",
+        "top_four_finish", "top_six_finish", "finish_last",
+    }:
+        return "team"
 
     if pm.competition in PLAYER_COMPETITIONS:
         return "player"
@@ -1304,6 +1499,9 @@ def build_event_fingerprint(pm: ParsedMarket) -> str:
         pm.league,
         pm.competition,
         pm.event_scope,
+        pm.event_kind,
+        pm.event_action,
+        pm.event_subject,
         pm.participant_type,
         participant,
         str(pm.year or ""),
@@ -1324,8 +1522,19 @@ def parse_sports(
     pm.league = league
     pm.competition = competition
     pm.event_scope = sports_event_scope(pm.title)
+    pm.event_kind = detect_sports_event_kind(pm.title)
+    pm.event_action = detect_sports_event_action(pm.title)
+    pm.event_subject = extract_sports_event_subject(pm.title)
     pm.teams = extract_teams(nt)
-    pm.player = extract_sports_participant(pm.title)
+    semantic_entity = extract_semantic_sports_entity(
+        pm.title,
+        pm.event_kind,
+    )
+    pm.player = (
+        semantic_entity
+        or extract_sports_participant(pm.title)
+        or pm.event_subject
+    )
     pm.market_type = detect_market_type(nt)
 
     prop_pattern = bounded_alt(
@@ -1441,6 +1650,18 @@ def index_keys(m: ParsedMarket) -> Set[str]:
             keys.add(f"sports|competition|{m.competition}")
         if m.event_scope:
             keys.add(f"sports|scope|{m.event_scope}")
+        if m.event_kind:
+            keys.add(f"sports|eventkind|{m.event_kind}")
+        if m.event_kind and m.year:
+            keys.add(f"sports|eventkindyear|{m.event_kind}|{m.year}")
+        if m.event_action:
+            keys.add(f"sports|action|{m.event_action}")
+        if m.event_subject:
+            keys.add(f"sports|subject|{m.event_subject}")
+        if m.event_action and m.event_subject:
+            keys.add(
+                f"sports|actionsubject|{m.event_action}|{m.event_subject}"
+            )
         for team in m.teams:
             keys.add(f"sports|team|{team}")
         if m.player:
@@ -1525,6 +1746,44 @@ def candidate_compatible(k: ParsedMarket, p: ParsedMarket) -> bool:
             return False
         if k.event_scope and p.event_scope and k.event_scope != p.event_scope:
             return False
+        if k.event_kind and p.event_kind and k.event_kind != p.event_kind:
+            return False
+
+        # For generic event markets, a known event kind on only one side is
+        # insufficient evidence of equivalence. Do not generate the pair.
+        if k.market_type == "event" and p.market_type == "event":
+            if bool(k.event_kind) != bool(p.event_kind):
+                return False
+
+        if k.event_action and p.event_action and k.event_action != p.event_action:
+            return False
+        if k.event_subject and p.event_subject and k.event_subject != p.event_subject:
+            return False
+
+        # Generic event markets require compatible semantic identity.
+        if (
+            k.market_type == "event"
+            and p.market_type == "event"
+            and not k.competition
+            and not p.competition
+        ):
+            if k.event_kind or p.event_kind:
+                if not k.event_kind or not p.event_kind:
+                    return False
+                if k.event_kind != p.event_kind:
+                    return False
+
+            if k.event_action or p.event_action:
+                if not k.event_action or not p.event_action:
+                    return False
+                if k.event_action != p.event_action:
+                    return False
+
+            if k.event_subject or p.event_subject:
+                if not k.event_subject or not p.event_subject:
+                    return False
+                if k.event_subject != p.event_subject:
+                    return False
 
         # When both participants are known, require identity before full scoring.
         if k.player and p.player and k.player != p.player:
@@ -1846,6 +2105,51 @@ def score_sports(k: ParsedMarket, p: ParsedMarket) -> Tuple[int, bool, List[str]
             f"same participant_type: {k.participant_type} (+10)"
         )
 
+    if k.event_kind or p.event_kind:
+        if not k.event_kind or not p.event_kind:
+            rejects.append(
+                f"one side missing event_kind: {k.event_kind} vs {p.event_kind}"
+            )
+            return score, False, reasons, rejects
+        if k.event_kind != p.event_kind:
+            rejects.append(
+                f"event_kind mismatch: {k.event_kind} vs {p.event_kind}"
+            )
+            return score, False, reasons, rejects
+        score += 25
+        reasons.append(f"same event_kind: {k.event_kind} (+25)")
+
+    if k.event_action or p.event_action:
+        if not k.event_action or not p.event_action:
+            rejects.append(
+                f"one side missing event_action: "
+                f"{k.event_action} vs {p.event_action}"
+            )
+            return score, False, reasons, rejects
+        if k.event_action != p.event_action:
+            rejects.append(
+                f"event_action mismatch: {k.event_action} vs {p.event_action}"
+            )
+            return score, False, reasons, rejects
+        score += 20
+        reasons.append(f"same event_action: {k.event_action} (+20)")
+
+    if k.event_subject or p.event_subject:
+        if not k.event_subject or not p.event_subject:
+            rejects.append(
+                f"one side missing event_subject: "
+                f"{k.event_subject} vs {p.event_subject}"
+            )
+            return score, False, reasons, rejects
+        if k.event_subject != p.event_subject:
+            rejects.append(
+                f"event_subject mismatch: "
+                f"{k.event_subject} vs {p.event_subject}"
+            )
+            return score, False, reasons, rejects
+        score += 20
+        reasons.append(f"same event_subject: {k.event_subject} (+20)")
+
     # Home Run Derby, MVP, Cy Young, World Series, etc. are different
     # resolution events even when the same athlete appears.
     if k.competition and p.competition:
@@ -2064,8 +2368,14 @@ def compact_fields(m: ParsedMarket) -> str:
         "league": m.league,
         "competition": m.competition,
         "event_scope": m.event_scope,
+        "event_kind": m.event_kind,
+        "event_action": m.event_action,
+        "event_subject": m.event_subject,
         "participant_type": m.participant_type,
         "event_fingerprint": m.event_fingerprint,
+        "market_intent": m.market_intent,
+        "entity_key": m.entity_key,
+        "event_object_key": m.event_object_key,
         "teams": m.teams,
         "player": m.player,
     }
