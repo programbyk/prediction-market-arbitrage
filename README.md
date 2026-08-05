@@ -375,3 +375,65 @@ A full fresh scan:
 ```bash
 python main.py --no-cache --show-candidates 20
 ```
+
+
+## V7.2 — Resolution Engine
+
+V7.2 separates:
+
+```text
+intent = what the market asks
+resolution = how the market settles
+```
+
+New resolution types include:
+
+```text
+price_at_time
+any_time_before
+threshold_at_deadline
+threshold_generic
+bounded_range
+event_winner
+event_occurrence
+```
+
+Example:
+
+```text
+XRP price at Aug 5, 2026 5pm
+```
+
+is now different from:
+
+```text
+XRP reaches $5 by Dec 31, 2026
+```
+
+even though both share the same asset and `price_threshold` intent.
+
+Hard filters now require compatible:
+
+```text
+entity
+intent
+resolution type
+year
+threshold
+direction
+resolution timestamp / deadline
+range bounds
+```
+
+Run:
+
+```bash
+python -m pytest tests/test_v72_resolution_engine.py
+python main.py --show-candidates 20
+```
+
+Inspect resolution fields in:
+
+```text
+exports/event_graph_nodes.csv
+```

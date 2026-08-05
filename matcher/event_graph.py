@@ -27,11 +27,58 @@ def annotate_event_objects(markets: Sequence[ParsedMarket]) -> int:
     return count
 
 
+
+def resolution_compatible(left: EventObject, right: EventObject) -> bool:
+    """Hard equivalence checks before a pair reaches the score matcher."""
+    if left.category != right.category:
+        return False
+    if left.entity.key != right.entity.key:
+        return False
+    if left.intent != right.intent:
+        return False
+
+    if (
+        left.resolution_type
+        and right.resolution_type
+        and left.resolution_type != right.resolution_type
+    ):
+        return False
+
+    if left.year and right.year and left.year != right.year:
+        return False
+
+    if left.threshold is not None and right.threshold is not None:
+        tolerance = max(0.001, 0.0001 * max(abs(left.threshold), abs(right.threshold), 1))
+        if abs(left.threshold - right.threshold) > tolerance:
+            return False
+
+    if left.direction and right.direction and left.direction != right.direction:
+        return False
+
+    if left.resolution_time and right.resolution_time:
+        if left.resolution_time != right.resolution_time:
+            return False
+
+    if left.deadline and right.deadline and left.deadline != right.deadline:
+        return False
+
+    if left.lower_bound is not None and right.lower_bound is not None:
+        if abs(left.lower_bound - right.lower_bound) > 0.001:
+            return False
+
+    if left.upper_bound is not None and right.upper_bound is not None:
+        if abs(left.upper_bound - right.upper_bound) > 0.001:
+            return False
+
+    return True
+
+
 def _graph_keys(event: EventObject) -> Set[str]:
     """Strict and relaxed keys that always preserve entity + intent."""
     keys = {
-        f"entity_intent|{event.category}|{event.entity.key}|{event.intent}",
         f"strict|{event.key}",
+        f"entity_intent_resolution|{event.category}|{event.entity.key}|"
+        f"{event.intent}|{event.resolution_type or ''}",
     }
 
     if event.year:
@@ -88,6 +135,9 @@ def event_graph_candidate_pairs(
             continue
         for key in _graph_keys(event):
             for poly_market in poly_graph.get(key, []):
+                poly_event = build_event_object(poly_market)
+                if not poly_event or not resolution_compatible(event, poly_event):
+                    continue
                 pair_id = (kalshi_market.source_id, poly_market.source_id)
                 pair_hits[pair_id] += 1
                 pair_objects[pair_id] = (kalshi_market, poly_market)
@@ -165,6 +215,13 @@ def export_event_graph(
             "market_intent": market.market_intent,
             "year": market.year or "",
             "event_object_key": market.event_object_key,
+            "resolution_type": market.resolution_type or "",
+            "resolution_time": market.resolution_time or "",
+            "deadline": market.deadline or "",
+            "lower_bound": market.lower_bound if market.lower_bound is not None else "",
+            "upper_bound": market.upper_bound if market.upper_bound is not None else "",
+            "threshold": market.threshold if market.threshold is not None else "",
+            "direction": market.direction or "",
             "title": market.title,
         })
 
@@ -179,6 +236,13 @@ def export_event_graph(
                 "market_intent",
                 "year",
                 "event_object_key",
+                "resolution_type",
+                "resolution_time",
+                "deadline",
+                "lower_bound",
+                "upper_bound",
+                "threshold",
+                "direction",
                 "title",
             ),
         )

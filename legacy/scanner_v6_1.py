@@ -164,6 +164,13 @@ class ParsedMarket:
     entity_key: Optional[str] = None
     event_object_key: Optional[str] = None
 
+    # V7.2 Resolution Engine
+    resolution_type: Optional[str] = None
+    resolution_time: Optional[str] = None
+    deadline: Optional[str] = None
+    lower_bound: Optional[float] = None
+    upper_bound: Optional[float] = None
+
     teams: Tuple[str, ...] = field(default_factory=tuple)
     player: Optional[str] = None
 
@@ -2376,6 +2383,11 @@ def compact_fields(m: ParsedMarket) -> str:
         "market_intent": m.market_intent,
         "entity_key": m.entity_key,
         "event_object_key": m.event_object_key,
+        "resolution_type": m.resolution_type,
+        "resolution_time": m.resolution_time,
+        "deadline": m.deadline,
+        "lower_bound": m.lower_bound,
+        "upper_bound": m.upper_bound,
         "teams": m.teams,
         "player": m.player,
     }
