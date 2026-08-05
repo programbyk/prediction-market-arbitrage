@@ -221,7 +221,10 @@ class ResolutionEngine:
 
         # Politics/sports/economy winner-style events.
         if market.market_intent:
-            if market.market_intent.endswith("_winner") or market.market_intent in {
+            if (
+                market.market_intent == "winner"
+                or market.market_intent.endswith("_winner")
+                or market.market_intent in {
                 "election_winner",
                 "primary_winner",
                 "match_winner",
@@ -231,7 +234,8 @@ class ResolutionEngine:
                 "conference_winner",
                 "super_bowl_winner",
                 "world_series_winner",
-            }:
+                }
+            ):
                 spec = ResolutionSpec(
                     resolution_type="event_winner",
                     deadline=timestamp,

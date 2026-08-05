@@ -171,5 +171,16 @@
   ],
   "grand_slam": [
     "grand slam"
+  ],
+  "tournament_winner": [
+    "win the us open",
+    "us open winner",
+    "win the australian open",
+    "australian open winner",
+    "win wimbledon",
+    "wimbledon winner",
+    "win the french open",
+    "french open winner",
+    "win roland garros"
   ]
 }

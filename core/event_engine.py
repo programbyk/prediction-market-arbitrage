@@ -9,6 +9,7 @@ from models import ParsedMarket
 from .entity_engine import Entity, EntityEngine
 from .intent_engine import IntentEngine, get_intent_engine
 from .resolution_engine import ResolutionEngine, ResolutionSpec
+from .canonical_engine import enrich_canonical_identity
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,7 @@ class EventEngine:
         self.resolution_engine = resolution_engine or ResolutionEngine()
 
     def build(self, market: ParsedMarket) -> Optional[EventObject]:
+        enrich_canonical_identity(market)
         entity = self.entity_engine.resolve(market)
         intent = self.intent_engine.resolve(market)
         if not entity or not intent:

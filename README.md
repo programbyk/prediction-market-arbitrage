@@ -437,3 +437,40 @@ Inspect resolution fields in:
 ```text
 exports/event_graph_nodes.csv
 ```
+
+
+## V7.3 — Canonical Identity + Confidence Engine
+
+V7.3 promotes the first verified real match:
+
+```text
+Kalshi: Alexandra Eala — 2026 US Open Women's Singles
+Polymarket: Alexandra Eala — 2026 Women's US Open
+```
+
+New features:
+
+- infer Kalshi years from tickers such as `KXWTA-26USO`;
+- canonical tennis tournament identities;
+- `event_winner` resolution for winner contracts;
+- confidence based on canonical EventObjects instead of title similarity;
+- missing-year tolerance only when the rest of the event identity is exact;
+- hard rejection for different competitions, years, resolution parameters, or
+  entities.
+
+Run:
+
+```bash
+python -m pytest tests/test_v73_canonical_confidence.py
+python main.py --show-candidates 20
+```
+
+Expected canonical fields for the Alexandra Eala pair:
+
+```text
+entity_key = player:alexandra_eala
+competition = us_open_womens_singles
+year = 2026
+market_intent = tournament_winner
+resolution_type = event_winner
+```

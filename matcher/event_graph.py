@@ -9,7 +9,8 @@ from typing import Dict, List, Sequence, Set, Tuple
 
 from core.event_engine import EventEngine, EventObject
 from models import MatchResult, ParsedMarket
-from legacy.scanner_v6_1 import compare_markets, is_review_candidate
+from legacy.scanner_v6_1 import is_review_candidate
+from matcher.confidence_engine import semantic_confidence
 
 
 _EVENT_ENGINE = EventEngine()
@@ -173,7 +174,17 @@ def find_event_graph_matches(
     all_scored: List[MatchResult] = []
 
     for kalshi_market, poly_market, hits in pairs:
-        result = compare_markets(kalshi_market, poly_market, hits)
+        kalshi_event = build_event_object(kalshi_market)
+        poly_event = build_event_object(poly_market)
+        if not kalshi_event or not poly_event:
+            continue
+        result = semantic_confidence(
+            kalshi_market,
+            poly_market,
+            kalshi_event,
+            poly_event,
+            hits,
+        )
         all_scored.append(result)
         if result.accepted:
             accepted.append(result)
