@@ -10,6 +10,7 @@ from .entity_engine import Entity, EntityEngine
 from .intent_engine import IntentEngine, get_intent_engine
 from .resolution_engine import ResolutionEngine, ResolutionSpec
 from .canonical_engine import enrich_canonical_identity
+from .knowledge_engine import enrich_knowledge_identity
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,15 @@ class EventObject:
     deadline: Optional[str] = None
     lower_bound: Optional[float] = None
     upper_bound: Optional[float] = None
+    canonical_country: Optional[str] = None
+    canonical_party: Optional[str] = None
+    proposition_subject_type: Optional[str] = None
+    proposition_subject_value: Optional[str] = None
+    election_id: Optional[str] = None
+    tournament_id: Optional[str] = None
+    gender: Optional[str] = None
+    tour: Optional[str] = None
+    surface: Optional[str] = None
 
     @property
     def key(self) -> str:
@@ -54,6 +64,10 @@ class EventObject:
             self.deadline or "",
             str(self.lower_bound) if self.lower_bound is not None else "",
             str(self.upper_bound) if self.upper_bound is not None else "",
+            self.canonical_country or "", self.canonical_party or "",
+            self.proposition_subject_type or "", self.proposition_subject_value or "",
+            self.election_id or "", self.tournament_id or "", self.gender or "",
+            self.tour or "", self.surface or "",
         ]
         return "|".join(parts)
 
@@ -71,6 +85,7 @@ class EventEngine:
 
     def build(self, market: ParsedMarket) -> Optional[EventObject]:
         enrich_canonical_identity(market)
+        enrich_knowledge_identity(market)
         entity = self.entity_engine.resolve(market)
         intent = self.intent_engine.resolve(market)
         if not entity or not intent:
@@ -98,6 +113,11 @@ class EventEngine:
             deadline=resolution.deadline if resolution else None,
             lower_bound=resolution.lower_bound if resolution else None,
             upper_bound=resolution.upper_bound if resolution else None,
+            canonical_country=market.canonical_country, canonical_party=market.canonical_party,
+            proposition_subject_type=market.proposition_subject_type,
+            proposition_subject_value=market.proposition_subject_value,
+            election_id=market.election_id, tournament_id=market.tournament_id,
+            gender=market.gender, tour=market.tour, surface=market.surface,
         )
 
         market.market_intent = event.intent

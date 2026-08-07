@@ -1,0 +1,48 @@
+{
+  "usa": [
+    "united states",
+    "u.s.",
+    "u.s.a.",
+    "usa",
+    "american",
+    "white house",
+    "us senate",
+    "us house",
+    "congress"
+  ],
+  "sweden": [
+    "sweden",
+    "swedish"
+  ],
+  "israel": [
+    "israel",
+    "israeli"
+  ],
+  "lebanon": [
+    "lebanon",
+    "lebanese"
+  ],
+  "cook_islands": [
+    "cook islands",
+    "cook island"
+  ],
+  "philippines": [
+    "philippines",
+    "philippine",
+    "bangsamoro",
+    "barmm"
+  ],
+  "united_kingdom": [
+    "united kingdom",
+    "uk",
+    "british"
+  ],
+  "france": [
+    "france",
+    "french"
+  ],
+  "germany": [
+    "germany",
+    "german"
+  ]
+}

@@ -171,6 +171,17 @@ class ParsedMarket:
     lower_bound: Optional[float] = None
     upper_bound: Optional[float] = None
 
+    # V7.4 Knowledge Layer
+    canonical_country: Optional[str] = None
+    canonical_party: Optional[str] = None
+    proposition_subject_type: Optional[str] = None
+    proposition_subject_value: Optional[str] = None
+    election_id: Optional[str] = None
+    tournament_id: Optional[str] = None
+    gender: Optional[str] = None
+    tour: Optional[str] = None
+    surface: Optional[str] = None
+
     teams: Tuple[str, ...] = field(default_factory=tuple)
     player: Optional[str] = None
 
@@ -2388,6 +2399,15 @@ def compact_fields(m: ParsedMarket) -> str:
         "deadline": m.deadline,
         "lower_bound": m.lower_bound,
         "upper_bound": m.upper_bound,
+        "canonical_country": m.canonical_country,
+        "canonical_party": m.canonical_party,
+        "proposition_subject_type": m.proposition_subject_type,
+        "proposition_subject_value": m.proposition_subject_value,
+        "election_id": m.election_id,
+        "tournament_id": m.tournament_id,
+        "gender": m.gender,
+        "tour": m.tour,
+        "surface": m.surface,
         "teams": m.teams,
         "player": m.player,
     }

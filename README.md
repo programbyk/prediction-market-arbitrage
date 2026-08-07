@@ -474,3 +474,23 @@ year = 2026
 market_intent = tournament_winner
 resolution_type = event_winner
 ```
+
+
+## V7.4 — Knowledge Layer / Entity Resolver 2.0
+
+Adds country-scoped party IDs, proposition subject identities, election IDs,
+and richer tournament metadata. Examples:
+
+```text
+party:usa:democratic_party
+party:sweden:social_democratic_party
+candidate:shawn_fain
+demographic:...:female
+```
+
+Run:
+
+```bash
+python -m pytest tests/test_v74_knowledge_layer.py
+python main.py --show-candidates 20
+```

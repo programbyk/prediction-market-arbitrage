@@ -46,6 +46,18 @@ def semantic_confidence(
             f"{kalshi_event.resolution_type} vs {poly_event.resolution_type}"
         )
 
+    for label, left, right in (
+        ("country", kalshi_event.canonical_country, poly_event.canonical_country),
+        ("party", kalshi_event.canonical_party, poly_event.canonical_party),
+        ("election", kalshi_event.election_id, poly_event.election_id),
+        ("proposition subject type", kalshi_event.proposition_subject_type, poly_event.proposition_subject_type),
+        ("proposition subject", kalshi_event.proposition_subject_value, poly_event.proposition_subject_value),
+        ("tournament", kalshi_event.tournament_id, poly_event.tournament_id),
+        ("gender", kalshi_event.gender, poly_event.gender),
+    ):
+        if left and right and left != right:
+            rejects.append(f"{label} mismatch: {left} vs {right}")
+
     if rejects:
         return MatchResult(
             kalshi_market,
@@ -136,6 +148,19 @@ def semantic_confidence(
             rejects,
             bucket_hits,
         )
+
+    for label, left, right, pts in (
+        ("country", kalshi_event.canonical_country, poly_event.canonical_country, 5),
+        ("party", kalshi_event.canonical_party, poly_event.canonical_party, 5),
+        ("election", kalshi_event.election_id, poly_event.election_id, 8),
+        ("proposition subject type", kalshi_event.proposition_subject_type, poly_event.proposition_subject_type, 5),
+        ("proposition subject", kalshi_event.proposition_subject_value, poly_event.proposition_subject_value, 8),
+        ("tournament", kalshi_event.tournament_id, poly_event.tournament_id, 8),
+        ("gender", kalshi_event.gender, poly_event.gender, 3),
+    ):
+        if left and right and left == right:
+            score += pts
+            reasons.append(f"same {label}: {left} (+{pts})")
 
     title_similarity = fuzzy_score(kalshi_market.title, poly_market.title)
     if title_similarity >= 70:

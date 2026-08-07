@@ -1,0 +1,47 @@
+{
+  "usa": {
+    "democratic_party": [
+      "democratic party",
+      "democrats",
+      "democratic"
+    ],
+    "republican_party": [
+      "republican party",
+      "republicans",
+      "gop",
+      "republican"
+    ]
+  },
+  "sweden": {
+    "social_democratic_party": [
+      "swedish social democratic party",
+      "social democratic party",
+      "social democrats"
+    ]
+  },
+  "israel": {
+    "democrats": [
+      "the democrats",
+      "democrats"
+    ]
+  },
+  "lebanon": {
+    "lana_social_democratic_party": [
+      "lana social democratic party",
+      "lana – social democratic party",
+      "lana - social democratic party"
+    ]
+  },
+  "cook_islands": {
+    "democratic_party": [
+      "democratic party"
+    ]
+  },
+  "philippines": {
+    "bangsamoro_peoples_democratic_party": [
+      "bangsamoro peoples democratic party",
+      "raayat democratic party",
+      "bangsamoro democratic party"
+    ]
+  }
+}
