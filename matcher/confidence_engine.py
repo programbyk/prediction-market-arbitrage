@@ -162,6 +162,17 @@ def semantic_confidence(
             score += pts
             reasons.append(f"same {label}: {left} (+{pts})")
 
+    for label, left, right, points in (
+        ("candidate", kalshi_event.canonical_candidate, poly_event.canonical_candidate, 12),
+        ("race", kalshi_event.race_id, poly_event.race_id, 12),
+        ("district", kalshi_event.district, poly_event.district, 5),
+        ("election type", kalshi_event.election_type, poly_event.election_type, 5),
+        ("contract type", kalshi_event.contract_type, poly_event.contract_type, 8),
+    ):
+        if left is not None and right is not None and left == right:
+            score += points
+            reasons.append(f"same {label}: {left} (+{points})")
+
     title_similarity = fuzzy_score(kalshi_market.title, poly_market.title)
     if title_similarity >= 70:
         score += 5

@@ -11,6 +11,7 @@ from .intent_engine import IntentEngine, get_intent_engine
 from .resolution_engine import ResolutionEngine, ResolutionSpec
 from .canonical_engine import enrich_canonical_identity
 from .knowledge_engine import enrich_knowledge_identity
+from .identity_v75 import enrich_v75_identity
 
 
 @dataclass(frozen=True)
@@ -38,10 +39,16 @@ class EventObject:
     proposition_subject_type: Optional[str] = None
     proposition_subject_value: Optional[str] = None
     election_id: Optional[str] = None
+    race_id: Optional[str] = None
+    district: Optional[int] = None
+    election_type: Optional[str] = None
+    canonical_candidate: Optional[str] = None
     tournament_id: Optional[str] = None
     gender: Optional[str] = None
     tour: Optional[str] = None
     surface: Optional[str] = None
+    contract_type: Optional[str] = None
+    contract_time_scope: Optional[str] = None
 
     @property
     def key(self) -> str:
@@ -86,6 +93,7 @@ class EventEngine:
     def build(self, market: ParsedMarket) -> Optional[EventObject]:
         enrich_canonical_identity(market)
         enrich_knowledge_identity(market)
+        enrich_v75_identity(market)
         entity = self.entity_engine.resolve(market)
         intent = self.intent_engine.resolve(market)
         if not entity or not intent:

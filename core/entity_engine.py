@@ -7,6 +7,7 @@ from typing import Optional
 
 from models import ParsedMarket
 from .knowledge_engine import enrich_knowledge_identity
+from .identity_v75 import enrich_v75_identity
 
 
 @dataclass(frozen=True)
@@ -35,6 +36,11 @@ class EntityEngine:
 
         elif market.category == "politics":
             enrich_knowledge_identity(market)
+            enrich_v75_identity(market)
+            if market.canonical_candidate:
+                return Entity("candidate", market.canonical_candidate)
+            if market.race_id:
+                return Entity("race", market.race_id)
             if market.proposition_subject_type == "candidate" and market.proposition_subject_value:
                 return Entity("candidate", market.proposition_subject_value)
             if market.proposition_subject_type and market.proposition_subject_value and market.election_id:

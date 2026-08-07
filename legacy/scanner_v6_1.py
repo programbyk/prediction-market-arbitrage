@@ -177,10 +177,16 @@ class ParsedMarket:
     proposition_subject_type: Optional[str] = None
     proposition_subject_value: Optional[str] = None
     election_id: Optional[str] = None
+    race_id: Optional[str] = None
+    district: Optional[int] = None
+    election_type: Optional[str] = None
+    canonical_candidate: Optional[str] = None
     tournament_id: Optional[str] = None
     gender: Optional[str] = None
     tour: Optional[str] = None
     surface: Optional[str] = None
+    contract_type: Optional[str] = None
+    contract_time_scope: Optional[str] = None
 
     teams: Tuple[str, ...] = field(default_factory=tuple)
     player: Optional[str] = None
@@ -2404,10 +2410,16 @@ def compact_fields(m: ParsedMarket) -> str:
         "proposition_subject_type": m.proposition_subject_type,
         "proposition_subject_value": m.proposition_subject_value,
         "election_id": m.election_id,
+        "race_id": m.race_id,
+        "district": m.district,
+        "election_type": m.election_type,
+        "canonical_candidate": m.canonical_candidate,
         "tournament_id": m.tournament_id,
         "gender": m.gender,
         "tour": m.tour,
         "surface": m.surface,
+        "contract_type": m.contract_type,
+        "contract_time_scope": m.contract_time_scope,
         "teams": m.teams,
         "player": m.player,
     }

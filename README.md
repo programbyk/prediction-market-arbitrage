@@ -494,3 +494,19 @@ Run:
 python -m pytest tests/test_v74_knowledge_layer.py
 python main.py --show-candidates 20
 ```
+
+
+## V7.5 — Race Identity + Crypto Contract Types
+
+Political markets now extract candidate, state, office, district,
+election type, year and a unique `race_id`.
+
+Crypto contracts now distinguish `price_snapshot`, `price_reach`,
+`price_range`, `price_threshold`, `all_time_high`, `market_cap`, and `etf`.
+
+Run:
+
+```bash
+python -m pytest tests/test_v75_race_and_crypto_identity.py
+python main.py --show-candidates 50
+```
